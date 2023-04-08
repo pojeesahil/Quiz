@@ -1,0 +1,186 @@
+<html>
+  <style>
+    .mid{
+      position:relative;
+      text-align:center;
+      width:100%;
+      top:0%;
+      font-size:10vw;
+    }
+    #question{
+      position:relative;
+      text-align:center;
+      width:100%;
+      
+      border:1px black solid;
+      font-size:5vw;
+      height:10%;
+      overflow:auto;
+    }
+    .cont{
+      position:relative;
+      width:100%;
+      height:40%;
+      border:black solid 1px;
+      font-size:2vw;
+    }
+    #subbtn{
+      position:relative;
+      width:100%;
+      font-size:10vw;
+    }
+    #tans{
+      position:relative;
+      width:100%;
+      font-size:3vw;
+      height:20%;
+    }
+  </style>
+  <body onload="startQuiz()">
+    <p class="mid">QUIZ</p>
+    <p id="question">Question</p>
+    <textarea id="yans" class="cont"></textarea>
+    <textarea  id="tans">your Answer is</textarea>
+    <button id="subbtn" onclick="subA()">submit</button>
+  </body>
+  <script>
+  try{
+  var data;
+  var questType=0;
+  var xmlhttp = new XMLHttpRequest();
+    var quest=document.getElementById("question");
+    var currentQuestion=0;
+    var currentAnswer;
+    var yans=document.getElementById("yans");
+    var tans=document.getElementById("tans");
+    function startQuiz(){
+      getJSONData("../quiz/info.json",function(){
+      try{
+        if(this.readyState===4){
+        data=JSON.parse(this.responseText);
+      
+      changeQuestion();
+        }
+      }catch(err){
+        alert(err);
+      }
+      });
+      
+      
+    }
+    function changeQuestion(){
+      questType=Math.floor(Math.random()*2);
+     // questType=1;
+      if(questType===0){
+        setQuestion(Math.floor(Math.random()*data.total))
+      }
+      if(questType===1){
+      setBlank(Math.floor(Math.random()*data.total))
+      }
+    }
+    function setQuestion(qnum){
+      currentQuestion=qnum;
+      quest.innerText=data.quiz[qnum].question;
+      currentAnswer=getVagueText(data.quiz[currentQuestion].answer.toLowerCase().replace(/[^a-zA-Z0-9 ]/g, "")).word;
+    }
+    function setBlank(qnum){
+      try{
+      currentQuestion=qnum;
+      var rAnswer=data.quiz[currentQuestion].answer.toLowerCase().replace(/[^a-zA-Z0-9 ]/g, "").split(" ");
+     var cAnswer=getVagueText(data.quiz[currentQuestion].answer.toLowerCase().replace(/[^a-zA-Z0-9 ]/g, "")).index;
+     var currentIndex=cAnswer[Math.floor(Math.random()*cAnswer.length)];
+      currentAnswer=rAnswer[currentIndex];
+      var tstr="";
+      for(var timed=0;timed<rAnswer.length;timed++){
+        if(timed===currentIndex){
+          tstr+="_____ ";
+        }else{
+        tstr+=rAnswer[timed]+" ";
+        }
+      }
+      quest.innerText=tstr;
+    }catch(err){
+  alert(err);
+}
+    }
+    function subA(){
+      var yourAns=yans.value;
+      
+      //alert(yourAns);
+      yourAns=getVagueText(yourAns.toLowerCase().replace(/[^a-zA-Z0-9 ]/g, "")).word;
+      
+      var comparison=compare(yourAns,currentAnswer);
+    // alert(yourAns+" "+currentAnswer);
+      if(comparison.accuracy===100||yourAns==currentAnswer){
+      tans.value="your Answer is correct";
+      }else{
+        tans.value="your Answer is wrong,Answer accuracy:"+comparison.accuracy+"%  ,missing phrase {"+JSON.stringify(comparison.right)+"}";
+       // tans.innerText="your Answer is wrong,correct answer is {"+data.quiz[currentQuestion].answer+"}";
+      }
+      changeQuestion();
+    }
+    function compare(wrong,right){
+      var wr=[];
+      var wr2=[];
+      var ri=[];
+      var accur=0;
+      var total=right.length;
+      
+      for(var timed=0;timed<right.length;timed++){
+        if(wrong[timed]!==right[timed]){
+          wr.push(wrong[timed]);
+          ri.push(right[timed]);
+        }else{
+          accur++;
+        }
+      }
+      for(var timed=0;timed<wrong.length;timed++){
+        var matched=false;
+       for(var tim=0;tim<right.length;tim++){
+         if(wr[timed]===right[tim]){
+           matched=true;
+           break;
+         }
+       }
+       if(matched===false){
+         wr2.push(wr[timed]);
+       }
+      }
+      wr=wr2;
+      return {"accuracy":((accur/total)*100),"wrong":wr,"right":ri};
+      
+    }
+    function getVagueText(tex){
+      var ntex=tex.split(" ");
+      var rans=[];
+      var tindex=[];
+      var forbidWords=["also","is","his","her","they","the","are","of","in","and","or","a","those","these","that","it","can","may","would"]
+      for(var timed=0;timed<ntex.length;timed++){
+        var isForbid=false;
+        for(var tim=0;tim<forbidWords.length;tim++){
+          if(ntex[timed]===forbidWords[tim]){
+            isForbid=true;
+            break;
+          }
+        }
+        if(isForbid===false){
+          rans.push(ntex[timed]);
+          tindex.push(timed);
+        }
+      }
+      
+   //   alert(JSON.stringify(rans));
+      return {"word":rans,"index":tindex};
+    }
+    function getJSONData(filename,nfunc) {
+    
+    xmlhttp.open('GET', filename, true);
+    xmlhttp.setRequestHeader("Content-type", "application/json", true);
+    xmlhttp.onreadystatechange=nfunc;
+    xmlhttp.send(null);
+}
+}catch(err){
+  alert(err);
+}
+  </script>
+</html>
